@@ -5,8 +5,10 @@
 tmp_*.json
 tmp_*.txt
 
-# Python 스크립트 (내부 작업용)
-*.py
+# Python 스크립트 (불필요한 것만 제외)
+inspect*.py
+validate*.py
+verify*.py
 
 # Claude 설정
 .claude/
