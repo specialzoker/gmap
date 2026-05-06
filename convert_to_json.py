@@ -7,7 +7,7 @@ import sys
 import math
 
 _script_dir = os.path.dirname(os.path.abspath(__file__))
-_default_xlsx = "2028 작업 틀_(2차 완료).xlsx"
+_default_xlsx = "raw.xlsx"
 
 if len(sys.argv) > 1:
     arg = sys.argv[1]

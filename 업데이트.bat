@@ -6,7 +6,7 @@ cd /d "%~dp0"
 echo ===== G-map 2028 데이터 업데이트 =====
 echo.
 
-set "DEFAULT_XLSX=2028 작업 틀_(2차 완료).xlsx"
+set "DEFAULT_XLSX=raw.xlsx"
 
 if "%~1"=="" (
     echo 엑셀 파일명을 입력하세요.
