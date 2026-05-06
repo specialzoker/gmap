@@ -1,0 +1,15 @@
+# 원본 데이터 (개인 파일)
+*.xlsx
+
+# 디버그/작업용 임시 파일
+tmp_*.json
+tmp_*.txt
+
+# Python 스크립트 (내부 작업용)
+*.py
+
+# Claude 설정
+.claude/
+
+# 기타
+*.log
