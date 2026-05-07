@@ -801,7 +801,7 @@ function exportCSV(tab) {
 // ====================================================
 // TAB 1: 특수학과
 // ====================================================
-let tFiltered = [], tPage = 1, tSortKey = '', tSortDir = 1, tQuick = '전체';
+let tFiltered = [], tPage = 1, tSortKey = '', tSortDir = 1, tQuick = new Set(['전체']);
 
 const QUICK_MAP = {
   '의예과':  r => {
@@ -884,14 +884,25 @@ function initT() {
 }
 
 function tSetQuick(btn) {
-  tQuick = btn.dataset.key;
-  document.querySelectorAll('.quick-btn').forEach(b => b.classList.toggle('active', b.dataset.key === tQuick));
+  const key = btn.dataset.key;
+  if (key === '전체') {
+    tQuick = new Set(['전체']);
+  } else {
+    tQuick.delete('전체');
+    if (tQuick.has(key)) {
+      tQuick.delete(key);
+      if (tQuick.size === 0) tQuick.add('전체');
+    } else {
+      tQuick.add(key);
+    }
+  }
+  document.querySelectorAll('.quick-btn').forEach(b => b.classList.toggle('active', tQuick.has(b.dataset.key)));
   tPage = 1; tRender();
 }
 function tReset() {
   ['t-search','t-jiyeok','t-sigi','t-yuhyeong'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('t-choejeo').checked = false;
-  tQuick = '전체';
+  tQuick = new Set(['전체']);
   document.querySelectorAll('.quick-btn').forEach(b => b.classList.toggle('active', b.dataset.key === '전체'));
   tSortKey = ''; tSortDir = 1; tPage = 1; clearSortArrows('tsrt-');
   tRender();
@@ -909,7 +920,9 @@ function tRender() {
   const sigi    = sv(document.getElementById('t-sigi').value);
   const yuhyeong = sv(document.getElementById('t-yuhyeong').value);
   const choejeoOnly = document.getElementById('t-choejeo').checked;
-  const qfn = QUICK_MAP[tQuick] || (() => true);
+  const qfn = tQuick.has('전체')
+    ? () => true
+    : r => [...tQuick].some(k => QUICK_MAP[k] && QUICK_MAP[k](r));
   let data = RAW_DATA.teuksu.filter(r => {
     if (!qfn(r)) return false;
     if (search && !lc(r['대학명']).includes(search) && !lc(r['학과']).includes(search)) return false;
