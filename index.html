@@ -139,6 +139,8 @@ tr:hover td { background: #eff6ff !important; cursor: pointer; }
         <select id="j-sigi" onchange="jRender()"><option value="">모집시기 전체</option></select>
         <select id="j-yuhyeong" onchange="jRender()"><option value="">전형유형 전체</option></select>
         <button class="btn btn-toggle" id="j-choejeo-btn" onclick="toggleJChoejeo()">최저기준 있는 것만</button>
+        <button class="btn btn-toggle" id="j-chulgyeol-btn" onclick="toggleJChulgyeol()">출결</button>
+        <button class="btn btn-toggle" id="j-myeonjeob-btn" onclick="toggleJMyeonjeob()">면접</button>
         <button class="btn btn-secondary" onclick="jReset()">초기화</button>
       </div>
     </div>
@@ -474,10 +476,10 @@ function switchTab(n) {
 // ====================================================
 // TAB 0: 전형검색
 // ====================================================
-let jFiltered = [], jPage = 1, jSortKey = '', jSortDir = 1, jChoejeoOn = false;
 
 // 전형검색 컬럼명 — 업로드된 파일과 기본 데이터 모두 동적으로 감지
 let J_KEY = { yuhyeong: '전형 유형', jname: '전형 유형_전형명', inwon: '선발인원_전형명', bangyeong: '전형유형별 전형요소반영비율_전형명', choejeo: '최저기준_적용여부' };
+let jFiltered = [], jPage = 1, jSortKey = '', jSortDir = 1, jChoejeoOn = false, jChulgyeolOn = false, jMyeonjeobOn = false;
 
 function detectJKeys(d) {
   if (!d || !d.length) return;
@@ -515,9 +517,21 @@ function toggleJChoejeo() {
   document.getElementById('j-choejeo-btn').classList.toggle('active', jChoejeoOn);
   jPage = 1; jRender();
 }
+function toggleJChulgyeol() {
+  jChulgyeolOn = !jChulgyeolOn;
+  document.getElementById('j-chulgyeol-btn').classList.toggle('active', jChulgyeolOn);
+  jPage = 1; jRender();
+}
+function toggleJMyeonjeob() {
+  jMyeonjeobOn = !jMyeonjeobOn;
+  document.getElementById('j-myeonjeob-btn').classList.toggle('active', jMyeonjeobOn);
+  jPage = 1; jRender();
+}
 function jReset() {
   ['j-search','j-bunryu','j-jiyeok','j-sigi','j-yuhyeong'].forEach(id => document.getElementById(id).value = '');
   jChoejeoOn = false; document.getElementById('j-choejeo-btn').classList.remove('active');
+  jChulgyeolOn = false; document.getElementById('j-chulgyeol-btn').classList.remove('active');
+  jMyeonjeobOn = false; document.getElementById('j-myeonjeob-btn').classList.remove('active');
   jSortKey = ''; jSortDir = 1; jPage = 1; clearSortArrows('jsrt-');
   jRender();
 }
@@ -541,6 +555,8 @@ function jRender() {
     if (sigi && sv(r['모집시기']) !== sigi) return false;
     if (yuhyeong && sv(r[J_KEY.yuhyeong]) !== yuhyeong) return false;
     if (jChoejeoOn && !sv(r[J_KEY.choejeo])) return false;
+    if (jChulgyeolOn && !sv(r[J_KEY.bangyeong]).includes('출결')) return false;
+    if (jMyeonjeobOn && !sv(r[J_KEY.bangyeong]).includes('면접')) return false;
     return true;
   });
   data = sortArr(data, jSortKey, jSortDir);
