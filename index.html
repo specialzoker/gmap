@@ -1478,15 +1478,21 @@ function initAllTabs() {
 // 저장된 데이터 자동 복원
 async function startup() {
   if (localStorage.getItem('gmap_data')) { loadFromStorage(); return; }
+  const el = document.getElementById('dataSource');
+  if (el) el.textContent = '⏳ 데이터 로딩 중...';
   const keys = ['jeonhyeong','teuksu','suneung_choejeo','gyogwa','suneung_bangyeong','byeondong'];
-  try {
-    await Promise.all(keys.map(async k => {
-      const r = await fetch('./data/' + k + '.json');
-      const j = await r.json();
-      RAW_DATA[k] = j.data;
-    }));
-  } catch(e) {
-    console.error('데이터 로드 실패:', e);
+  const results = await Promise.allSettled(keys.map(async k => {
+    const r = await fetch('./data/' + k + '.json');
+    if (!r.ok) throw new Error(k + ' HTTP ' + r.status);
+    const j = await r.json();
+    RAW_DATA[k] = Array.isArray(j.data) ? j.data : [];
+  }));
+  const failed = results.filter(r => r.status === 'rejected').map(r => r.reason);
+  if (failed.length) {
+    console.error('data load failed:', failed);
+    if (el) el.textContent = '⚠️ 로드 실패: ' + failed.map(e=>e.message).join(', ');
+  } else {
+    if (el) el.textContent = '기본 데이터';
   }
   buildSunmokMap();
   initAllTabs();
