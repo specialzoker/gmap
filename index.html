@@ -389,6 +389,117 @@ tr:hover td { background: #eff6ff !important; cursor: pointer; }
 // ===== 임베드 데이터 =====
 let RAW_DATA = {};
 
+// ===== 공통 유틸 =====
+const PER = 50;
+function sv(x) { return (x == null ? '' : String(x)).trim(); }
+function lc(x) { return sv(x).toLowerCase(); }
+function uniq(arr, key) {
+  const s = new Set();
+  arr.forEach(r => { const val = sv(r[key]); if (val) s.add(val); });
+  return [...s].sort((a,b) => a.localeCompare(b,'ko'));
+}
+function fillSel(id, vals, allTxt) {
+  const el = document.getElementById(id);
+  const cur = el.value;
+  el.innerHTML = '<option value="">' + allTxt + '</option>';
+  vals.forEach(v => el.innerHTML += '<option value="' + v + '">' + v + '</option>');
+  if (cur) el.value = cur;
+}
+function buildPager(containerId, total, page, cb) {
+  const el = document.getElementById(containerId);
+  const totalPages = Math.ceil(total / PER);
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+  const maxShow = 7;
+  let start = Math.max(1, page - 3), end = Math.min(totalPages, page + 3);
+  let html = '';
+  html += '<button class="page-btn" onclick="'+cb+'(1)" '+(page===1?'disabled':'')+'>«</button>';
+  html += '<button class="page-btn" onclick="'+cb+'('+(page-1)+')" '+(page===1?'disabled':'')+'>‹</button>';
+  if (start > 1) html += '<span style="padding:0 4px;color:#9ca3af;font-size:13px">···</span>';
+  for (let i = start; i <= end; i++) {
+    html += '<button class="page-btn'+(i===page?' active':'')+'" onclick="'+cb+'('+i+')">'+i+'</button>';
+  }
+  if (end < totalPages) html += '<span style="padding:0 4px;color:#9ca3af;font-size:13px">···</span>';
+  html += '<button class="page-btn" onclick="'+cb+'('+(page+1)+')" '+(page===totalPages?'disabled':'')+'>›</button>';
+  html += '<button class="page-btn" onclick="'+cb+'('+totalPages+')" '+(page===totalPages?'disabled':'')+'>»</button>';
+  html += '<span style="font-size:12px;color:#6b7280;margin-left:8px;">'+page+' / '+totalPages+'페이지</span>';
+  el.innerHTML = html;
+}
+function sortArr(arr, key, dir, getVal) {
+  if (!key) return arr;
+  return arr.slice().sort((a, b) => {
+    const av = getVal ? getVal(a, key) : sv(a[key]);
+    const bv = getVal ? getVal(b, key) : sv(b[key]);
+    const an = parseFloat(av), bn = parseFloat(bv);
+    if (!isNaN(an) && !isNaN(bn)) return (an - bn) * dir;
+    return av.localeCompare(bv, 'ko') * dir;
+  });
+}
+function clearSortArrows(prefix) {
+  document.querySelectorAll('[id^="'+prefix+'"]').forEach(el => el.className = 'sort-arrow');
+}
+function setSortArrow(prefix, key, dir) {
+  clearSortArrows(prefix);
+  const el = document.getElementById(prefix + key);
+  if (el) el.className = 'sort-arrow ' + (dir === 1 ? 'asc' : 'desc');
+}
+function typeColor(t) {
+  const m = {교과:'badge-green',종합:'badge-blue',논술:'badge-yellow',수능:'badge-red',실기:'badge-purple'};
+  return m[t] || 'badge-gray';
+}
+function escH(s) { return sv(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function downloadCSV(rows, filename) {
+  const bom = '﻿';
+  const csv = bom + rows.map(r => r.map(c => '"' + sv(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+function closeModalOverlay(e) {
+  if (e.target === document.getElementById('modal')) document.getElementById('modal').classList.remove('show');
+}
+function switchTab(n) {
+  document.querySelectorAll('.tab-panel').forEach((p, i) => p.classList.toggle('active', i === n));
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === n));
+}
+
+// 날짜
+(function() {
+  const d = new Date();
+  document.getElementById('headerDate').textContent =
+    d.getFullYear() + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + String(d.getDate()).padStart(2,'0');
+})();
+
+// ====================================================
+// TAB 0: 전형검색
+// ====================================================
+let jFiltered = [], jPage = 1, jSortKey = '', jSortDir = 1, jChoejeoOn = false;
+
+// 전형검색 컬럼명 — 업로드된 파일과 기본 데이터 모두 동적으로 감지
+let J_KEY = { yuhyeong: '전형 유형', jname: '전형 유형_전형명', inwon: '선발인원_전형명', bangyeong: '전형유형별 전형요소반영비율_전형명', choejeo: '최저기준_적용여부' };
+
+function detectJKeys(d) {
+  if (!d || !d.length) return;
+  const keys = Object.keys(d[0]);
+  const clean = k => k.trim().replace(/\s+/g, '');
+
+  // 전형유형: "전형유형" 단독 key (복합 key 제외)
+  J_KEY.yuhyeong = keys.find(k => /^전형.{0,2}유형$/.test(clean(k)))
+    || keys.find(k => ['전형유형','전형 유형','전형_유형'].includes(k))
+    || '전형 유형';
+
+  // 전형명: 유형+전형명 복합 key
+  J_KEY.jname = keys.find(k => /^전형.{0,2}유형.{0,3}전형명$/.test(clean(k)))
+    || keys.find(k => k === '전형명')
+    || '전형 유형_전형명';
+
+  J_KEY.inwon     = keys.find(k => k.includes('선발인원')) || '선발인원_전형명';
+  J_KEY.bangyeong = keys.find(k => k.includes('반영비율') || k.includes('반영 비율')) || '전형유형별 전형요소반영비율_전형명';
+  J_KEY.choejeo   = keys.find(k => k.includes('최저기준')) || '최저기준_적용여부';
+  console.log('[J_KEY]', JSON.stringify(J_KEY));
+}
+
 function initJ() {
   const d = RAW_DATA.jeonhyeong;
   detectJKeys(d);
