@@ -594,7 +594,7 @@ function jRender() {
   let data = RAW_DATA.jeonhyeong.filter(r => {
     if (searchTerms.length > 0) {
       const name = lc(sv(r['대학교']));
-      if (!searchTerms.every(t => name.includes(t))) return false;
+      if (!searchTerms.some(t => name.includes(t))) return false;
     }
     if (bunryu && sv(r['분류']) !== bunryu) return false;
     if (jiyeok && sv(r['지역']) !== jiyeok) return false;
