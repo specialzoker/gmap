@@ -922,7 +922,6 @@ function initG() {
   gRenderHeader();
   gRender();
 }
-initG();
 
 function gRenderHeader() {
   const cols = gCurrentCols;
@@ -1087,7 +1086,6 @@ function initB() {
   fillSel('b-sigi', sigis, '시기 전체');
   bRender();
 }
-initB();
 
 function bReset() {
   ['b-search','b-jiyeok','b-sigi'].forEach(id => document.getElementById(id).value = '');
