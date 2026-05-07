@@ -413,17 +413,8 @@ tr:hover td { background: #eff6ff !important; cursor: pointer; }
   <div class="modal-box modal-box-wide">
     <button class="modal-close" onclick="document.getElementById('cmp-modal').classList.remove('show')">✕ 닫기</button>
     <div class="modal-title">⚖️ 대학 비교</div>
-    <div class="cmp-selects">
-      <div class="cmp-select-wrap">
-        <div class="cmp-select-label">대학교 A</div>
-        <select id="cmp-a" onchange="renderCompare()"><option value="">대학교 선택</option></select>
-      </div>
-      <div class="cmp-select-wrap">
-        <div class="cmp-select-label">대학교 B</div>
-        <select id="cmp-b" onchange="renderCompare()"><option value="">대학교 선택</option></select>
-      </div>
-    </div>
-    <div class="cmp-panels" id="cmp-body">
+    <div id="cmp-selects-wrap" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:flex-end;"></div>
+    <div id="cmp-body" style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;">
       <div class="cmp-empty" style="width:100%">비교할 대학교를 위에서 선택하세요.</div>
     </div>
   </div>
@@ -631,29 +622,65 @@ function jRender() {
 // ====================================================
 // 대학 비교
 // ====================================================
+let cmpUnivs = ['', ''];
+let _cmpOpts = '';
+
 function openCompareModal() {
   const univs = uniq(RAW_DATA.jeonhyeong, '대학교');
-  const opts = '<option value="">대학교 선택</option>' + univs.map(u => '<option value="'+escH(u)+'">'+escH(u)+'</option>').join('');
-  document.getElementById('cmp-a').innerHTML = opts;
-  document.getElementById('cmp-b').innerHTML = opts;
+  _cmpOpts = '<option value="">대학교 선택</option>' + univs.map(u => '<option value="'+escH(u)+'">'+escH(u)+'</option>').join('');
   document.getElementById('cmp-modal').classList.add('show');
+  renderCmpSelects();
   renderCompare();
 }
 function closeCmpModal(e) {
   if (!e || e.target === document.getElementById('cmp-modal'))
     document.getElementById('cmp-modal').classList.remove('show');
 }
+function addCmpUniv() {
+  if (cmpUnivs.length >= 5) return;
+  cmpUnivs.push('');
+  renderCmpSelects();
+  renderCompare();
+}
+function removeCmpUniv(idx) {
+  cmpUnivs.splice(idx, 1);
+  renderCmpSelects();
+  renderCompare();
+}
+function onCmpSelect(idx, val) {
+  cmpUnivs[idx] = val;
+  renderCompare();
+}
+function renderCmpSelects() {
+  const labels = ['A','B','C','D','E'];
+  const wrap = document.getElementById('cmp-selects-wrap');
+  let html = cmpUnivs.map((u, i) =>
+    '<div class="cmp-select-wrap" style="flex:1;min-width:150px;max-width:210px;">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'
+    + '<div class="cmp-select-label">대학교 '+labels[i]+'</div>'
+    + (cmpUnivs.length > 1 ? '<button onclick="removeCmpUniv('+i+')" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:18px;line-height:1;padding:0;" title="제거">×</button>' : '')
+    + '</div>'
+    + '<select onchange="onCmpSelect('+i+',this.value)" style="width:100%;font-size:13px;height:36px;">'+_cmpOpts+'</select>'
+    + '</div>'
+  ).join('');
+  html += '<button class="btn btn-primary" onclick="addCmpUniv()" style="white-space:nowrap;align-self:flex-end;"'
+    + (cmpUnivs.length >= 5 ? ' disabled style="opacity:0.4;cursor:not-allowed;"' : '')
+    + '>+ 대학 추가</button>';
+  wrap.innerHTML = html;
+  // 선택값 복원
+  wrap.querySelectorAll('select').forEach((sel, i) => { if (cmpUnivs[i]) sel.value = cmpUnivs[i]; });
+}
 function renderCompare() {
-  const a = sv(document.getElementById('cmp-a').value);
-  const b = sv(document.getElementById('cmp-b').value);
   const body = document.getElementById('cmp-body');
-  if (!a && !b) {
+  if (cmpUnivs.every(u => !u)) {
     body.innerHTML = '<div class="cmp-empty" style="width:100%">비교할 대학교를 위에서 선택하세요.</div>';
     return;
   }
-  const rowsA = a ? RAW_DATA.jeonhyeong.filter(r => sv(r['대학교']) === a) : [];
-  const rowsB = b ? RAW_DATA.jeonhyeong.filter(r => sv(r['대학교']) === b) : [];
-  body.innerHTML = renderCmpPanel(a, rowsA) + renderCmpPanel(b, rowsB);
+  const panelW = cmpUnivs.length <= 2 ? 'calc(50% - 7px)' : cmpUnivs.length === 3 ? 'calc(33.33% - 10px)' : 'calc(25% - 11px)';
+  body.innerHTML = cmpUnivs.map(u => {
+    const rows = u ? RAW_DATA.jeonhyeong.filter(r => sv(r['대학교']) === u) : [];
+    return '<div style="flex:1;min-width:260px;">' + renderCmpPanel(u, rows) + '</div>';
+  }).join('');
 }
 function renderCmpPanel(univName, rows) {
   if (!univName) return '<div class="cmp-panel" style="border-color:#d1d5db"><div class="cmp-header" style="background:#9ca3af">대학교를 선택하세요</div><div class="cmp-empty">—</div></div>';
