@@ -760,7 +760,12 @@ function exportCSV(tab) {
 let tFiltered = [], tPage = 1, tSortKey = '', tSortDir = 1, tQuick = '전체';
 
 const QUICK_MAP = {
-  '의예과':  r => sv(r['구분_2']) === '의' || lc(r['학과']).includes('의예') || lc(r['학과']).includes('의학'),
+  '의예과':  r => {
+    const g = sv(r['구분_2']); const hak = lc(r['학과']);
+    return g === '의'
+      || (hak.includes('의예') && !hak.includes('치의') && !hak.includes('한의'))
+      || (hak.includes('의학') && !hak.includes('치의') && !hak.includes('한의') && !hak.includes('수의'));
+  },
   '치의예과': r => sv(r['구분_2']) === '치' || lc(r['학과']).includes('치의'),
   '한의예과': r => sv(r['구분_2']) === '한' || lc(r['학과']).includes('한의'),
   '약학과':  r => sv(r['구분_2']) === '약' || lc(r['학과']).includes('약학') || lc(r['학과']).includes('약대'),
