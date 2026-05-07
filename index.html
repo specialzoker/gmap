@@ -685,9 +685,12 @@ function renderCmpPanel(univName, rows) {
         const inwon = sv(r[J_KEY.inwon]);
         const cval  = sv(r[J_KEY.choejeo]);
         const ratio = sv(r[J_KEY.bangyeong]);
+        const gun   = sv(r['모집시기']);
+        const isSuneung = sv(r[J_KEY.yuhyeong]) === '수능';
+        const gunTag = (isSuneung && gun) ? '<span class="badge badge-purple" style="font-size:10px;padding:1px 6px;">'+escH(gun)+'군</span>' : '';
         const choejeoTag = cval ? '<span class="badge badge-red" style="font-size:10px;padding:1px 5px;">최저</span>' : '';
         html += '<div class="cmp-item">'
-          + '<div class="cmp-item-name">'+escH(jname)+' '+choejeoTag+'</div>'
+          + '<div class="cmp-item-name">'+escH(jname)+' '+gunTag+' '+choejeoTag+'</div>'
           + '<div class="cmp-item-meta">'
           + (inwon ? '<span>선발인원 <b>'+escH(inwon)+'</b>명</span>' : '')
           + '</div>'
