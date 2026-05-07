@@ -685,13 +685,20 @@ function renderCompare() {
 function renderCmpPanel(univName, rows) {
   if (!univName) return '<div class="cmp-panel" style="border-color:#d1d5db"><div class="cmp-header" style="background:#9ca3af">대학교를 선택하세요</div><div class="cmp-empty">—</div></div>';
 
-  // 전형유형별 그룹화 (순서 보존)
-  const typeOrder = [];
+  // 전형유형별 그룹화 (교과→종합→논술→수능→기타 순)
+  const TYPE_ORDER = ['교과','종합','논술','수능'];
   const groups = {};
   rows.forEach(r => {
     const type = sv(r[J_KEY.yuhyeong]) || '기타';
-    if (!groups[type]) { groups[type] = []; typeOrder.push(type); }
+    if (!groups[type]) groups[type] = [];
     groups[type].push(r);
+  });
+  const typeOrder = Object.keys(groups).sort((a, b) => {
+    const ia = TYPE_ORDER.indexOf(a), ib = TYPE_ORDER.indexOf(b);
+    if (ia === -1 && ib === -1) return a.localeCompare(b, 'ko');
+    if (ia === -1) return 1;
+    if (ib === -1) return -1;
+    return ia - ib;
   });
 
   const totalInwon = rows.reduce((s, r) => {
