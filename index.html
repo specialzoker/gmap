@@ -1221,7 +1221,8 @@ function gRender() {
   document.getElementById('g-count').textContent = data.length;
   const chunk = data.slice((gPage-1)*PER, gPage*PER);
   const cols = gCurrentCols;
-  document.getElementById('g-tbody').innerHTML = chunk.map(r => {
+  document.getElementById('g-tbody').innerHTML = chunk.map((r, ci) => {
+    const globalIdx = (gPage-1)*PER + ci;
     const jiwon = sv(r['졸업생  지원여부']);
     const jiwonHtml = jiwon==='1' ? '<span class="badge badge-green">가능</span>'
       : jiwon==='0' ? '<span class="badge badge-red">불가</span>' : '-';
@@ -1230,7 +1231,7 @@ function gRender() {
       const hi = gCalcActive && i === gHighlightCol;
       return '<td style="text-align:center;'+(hi?'background:#fef9c3;font-weight:700;color:#92400e;':'')+'">'+(val||'-')+'</td>';
     }).join('');
-    return '<tr>'
+    return '<tr ondblclick="showGyogwaDetail('+globalIdx+')" style="cursor:pointer;" title="더블클릭하면 상세 산출방법을 볼 수 있습니다">'
       +'<td style="font-weight:600">'+escH(r['대학교'])+'</td>'
       +'<td>'+escH(r['전형명'])+'</td>'
       +'<td style="font-size:12px">'+escH(r['반영과목'])+'</td>'
@@ -1240,6 +1241,87 @@ function gRender() {
       +'</tr>';
   }).join('');
   buildPager('g-paginator', data.length, gPage, 'gGoPage');
+}
+
+function showGyogwaDetail(idx) {
+  const r = gFiltered[idx];
+  if (!r) return;
+
+  const univ     = escH(sv(r['대학교']));
+  const jname    = escH(sv(r['전형명']));
+  const hakgwa   = sv(r['학과 또는 단과']);
+  const yuhyeong = sv(r['전형 유형']);
+  const mosigi   = sv(r['모집시기']);
+  const bangyeong= sv(r['반영과목']);
+  const jaeoe    = sv(r['반영제외과목']);
+  const jipyo    = sv(r['반영지표']);
+  const jiwon    = sv(r['졸업생  지원여부']);
+  const bigo     = sv(r['비고_9']);
+  const jiwonBadge = jiwon==='1'?'<span class="badge badge-green">가능</span>':jiwon==='0'?'<span class="badge badge-red">불가</span>':'<span style="color:#9ca3af">-</span>';
+
+  // 등급별 환산점 (5등급제)
+  const g5keys = ['등급별 환산점_1','등급별 환산점_2','등급별 환산점_3','등급별 환산점_4','등급별 환산점_5'];
+  const g5vals = g5keys.map(k => sv(r[k]));
+  const hasG5 = g5vals.some(v => v);
+
+  // 성취도 환산점
+  const achKeys = ['성취도 환산점_A','성취도 환산점_B','성취도 환산점_C','성취도 환산점_D','성취도 환산점_E'];
+  const achVals = achKeys.map(k => sv(r[k]));
+  const hasAch = achVals.some(v => v);
+
+  // 9등급제 5등급 변환
+  const g9keys = Array.from({length:9},(_,i)=>'9등급제 5등급 변환_'+(i+1));
+  const g9vals = g9keys.map(k => sv(r[k]));
+  const hasG9 = g9vals.some(v => v);
+
+  function scoreTable(headers, values) {
+    return '<table style="border-collapse:collapse;width:100%;font-size:13px;">'
+      +'<tr>'+headers.map(h=>'<th style="background:#f3f4f6;padding:6px 10px;border:1px solid #e5e7eb;text-align:center;font-weight:600;color:#374151;">'+h+'</th>').join('')+'</tr>'
+      +'<tr>'+values.map(v=>'<td style="padding:6px 10px;border:1px solid #e5e7eb;text-align:center;font-size:15px;font-weight:700;color:#4F46E5;">'+(v||'-')+'</td>').join('')+'</tr>'
+      +'</table>';
+  }
+
+  let html = '<div style="font-size:13px;line-height:1.8;">';
+
+  // 기본정보 섹션
+  html += '<div style="background:#f9fafb;border-radius:8px;padding:12px 14px;margin-bottom:14px;border:1px solid #e5e7eb;">';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;">';
+  if (hakgwa)   html += '<div><span style="color:#6b7280;font-size:11px;font-weight:700;">학과/단과</span><br>'+escH(hakgwa)+'</div>';
+  if (yuhyeong) html += '<div><span style="color:#6b7280;font-size:11px;font-weight:700;">전형유형</span><br>'+escH(yuhyeong)+'</div>';
+  if (mosigi)   html += '<div><span style="color:#6b7280;font-size:11px;font-weight:700;">모집시기</span><br>'+escH(mosigi)+'</div>';
+  html += '<div><span style="color:#6b7280;font-size:11px;font-weight:700;">졸업생지원</span><br>'+jiwonBadge+'</div>';
+  if (bangyeong)html += '<div><span style="color:#6b7280;font-size:11px;font-weight:700;">반영과목</span><br>'+escH(bangyeong)+'</div>';
+  if (jaeoe)    html += '<div><span style="color:#6b7280;font-size:11px;font-weight:700;">반영제외과목</span><br>'+escH(jaeoe)+'</div>';
+  if (jipyo)    html += '<div><span style="color:#6b7280;font-size:11px;font-weight:700;">반영지표</span><br>'+escH(jipyo)+'</div>';
+  html += '</div></div>';
+
+  // 환산점 테이블들
+  if (hasG5) {
+    html += '<div style="margin-bottom:12px;"><div class="modal-label" style="margin-bottom:6px;">📊 5등급제 환산점</div>'
+      + scoreTable(['1등급','2등급','3등급','4등급','5등급'], g5vals) + '</div>';
+  }
+  if (hasAch) {
+    html += '<div style="margin-bottom:12px;"><div class="modal-label" style="margin-bottom:6px;">📊 성취도 환산점</div>'
+      + scoreTable(['A','B','C','D','E'], achVals) + '</div>';
+  }
+  if (hasG9) {
+    html += '<div style="margin-bottom:12px;"><div class="modal-label" style="margin-bottom:6px;">📊 9등급제 → 5등급 변환점</div>'
+      + scoreTable(['1등급','2등급','3등급','4등급','5등급','6등급','7등급','8등급','9등급'], g9vals) + '</div>';
+  }
+
+  // 비고 (핵심!)
+  if (bigo) {
+    html += '<div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:12px 14px;">'
+      +'<div style="font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;">📝 산출방법 상세</div>'
+      +'<div style="font-size:13px;color:#1f2937;line-height:1.8;white-space:pre-wrap;">'+escH(bigo)+'</div>'
+      +'</div>';
+  }
+
+  html += '</div>';
+
+  document.getElementById('modal-title').innerHTML = univ + ' <span style="font-weight:400;color:#6b7280;font-size:14px;">— '+jname+'</span>';
+  document.getElementById('modal-content').innerHTML = html;
+  document.getElementById('modal').classList.add('show');
 }
 
 // ====================================================
